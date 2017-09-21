@@ -56,3 +56,8 @@ for y_win in range(y_win_dim):
         l_mat[x_win, y_win] = np.amax(B[x_win,y_win])
 print(m_mat)
 print(l_mat)
+
+padded_m_mat = np.pad(m_mat,1,'constant',constant_values=(0))
+for y_win in range(1,y_win_dim-1):
+    for x_win in range(1,x_win_dim-1):
+        pass
