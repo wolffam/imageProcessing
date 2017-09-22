@@ -84,7 +84,9 @@ def plot_3d(matrix: np.ndarray):
 
 def main():
     # Input settings
+    # Set to width of target in # of pixels
     target_width = 100
+    # Sets stride of windows -- always half of the target width
     stride = target_width // 2
 
     # PreProcess and crop image
@@ -104,6 +106,9 @@ def main():
 
     # Return ilcm matrix for plotting
     ilcm_mat = calc_ilcm(padded_m_mat, m_mat, l_mat)
+
+    # TODO
+    #threshold = calc_thres(ilcm_mat, k=1.25)
 
     # Visualization
     plot_heatmap(ilcm_mat)
