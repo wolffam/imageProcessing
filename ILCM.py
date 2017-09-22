@@ -1,12 +1,9 @@
 import numpy as np
 from PIL import Image
-from sklearn.feature_extraction import image
 from skimage.util.shape import view_as_windows
+import matplotlib.pyplot as plt
 
 
-class Block():
-    def __init__(self):
-        self.block_dict = {}
 
 
 im = Image.open("person.jpg")
@@ -57,7 +54,28 @@ for y_win in range(y_win_dim):
 print(m_mat)
 print(l_mat)
 
+def calc_ilcm(m_win, x, y):
+    view_as_windows(padded_m_mat,(3,3),step=1)
+
+
+
 padded_m_mat = np.pad(m_mat,1,'constant',constant_values=(0))
 for y_win in range(1,y_win_dim-1):
     for x_win in range(1,x_win_dim-1):
         pass
+
+print(padded_m_mat)
+def calc_ilcm(padded):
+    ilcm_mat = np.zeros([x_win_dim,y_win_dim])
+    ilcm_win = view_as_windows(padded,(3,3),step=1)
+    for y_win in range(target_width+1):
+        for x_win in range(target_width+1):
+            max_m = np.amax(ilcm_win[x_win,y_win])
+            ilcm_mat[x_win,y_win] = l_mat[x_win,y_win]*m_mat[x_win, y_win]/max_m
+    print(ilcm_mat)
+    return ilcm_mat
+
+ilcm = calc_ilcm(padded_m_mat)
+
+plt.imshow(ilcm, cmap='hot', interpolation='nearest')
+plt.show()
