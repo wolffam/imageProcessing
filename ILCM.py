@@ -2,80 +2,112 @@ import numpy as np
 from PIL import Image
 from skimage.util.shape import view_as_windows
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 
+def pre_process(image_file: str) -> np.ndarray:
+    im_raw = Image.open(image_file)
+    im_crop = im_raw.crop((20,20,580,443))
+    return im_crop
 
 
-im = Image.open("person.jpg")
-im = im.crop((20,20,580,443))
-
-target_width = 2
-stride = target_width//2
-
-width,height = im.size
-print(width)
-print(height)
-matrix = np.zeros([width,height])
-for y in range(height):
+def pixel_matrix(processed_image: np.ndarray) -> np.ndarray:
+    width, height = processed_image.size
+    pix_matrix = np.zeros([height, width])
     for x in range(width):
-        matrix[x,y] = im.getpixel((x,y))[0]
-
-#blocks = image.extract_patches_2d(matrix,[stride,stride])
-#print(blocks[0].sum())
-#print(blocks[0])
-block_list = []
-#print(blocks.shape)
-'''
-for ind,block in enumerate(blocks):
-    ind_block = Block()
-    #m = 1/(stride**2)*ind_block.sum()
-'''
+        for y in range(height):
+            # '0' to just get the 'R' value
+            pix_matrix[y, x] = processed_image.getpixel((x, y))[0]
+    return pix_matrix
 
 
-#print(matrix[0:5,0:5])
+def process_windows(window_mat: np.ndarray, target_wid: int) -> (np.ndarray, np.ndarray):
+    x_win_dim = window_mat.shape[0]
+    y_win_dim = window_mat.shape[1]
+    m_matrix = np.zeros([x_win_dim,y_win_dim])
+    l_matrix = np.zeros([x_win_dim,y_win_dim])
 
-#B = view_as_windows(matrix,(target_width,target_width), step=stride)
+    for y_win in range(y_win_dim):
+        for x_win in range(x_win_dim):
+            m_matrix[x_win, y_win] = 1 / (target_wid ** 2) * window_mat[x_win,y_win].sum()
+            l_matrix[x_win, y_win] = np.amax(window_mat[x_win,y_win])
 
-A = np.arange(4*4).reshape(4,4)
-B = view_as_windows(A,(2,2), step=1)
-print(A)
-x_win_dim = B.shape[0]
-y_win_dim = B.shape[1]
-
-print(B[0,0])
-print(B.shape)
-print(B[0,1])
-m_mat = np.zeros([x_win_dim,y_win_dim])
-l_mat = np.zeros([x_win_dim,y_win_dim])
-for y_win in range(y_win_dim):
-    for x_win in range(x_win_dim):
-        m_mat[x_win, y_win] = 1 / (target_width ** 2) * B[x_win,y_win].sum()
-        l_mat[x_win, y_win] = np.amax(B[x_win,y_win])
-print(m_mat)
-print(l_mat)
-
-def calc_ilcm(m_win, x, y):
-    view_as_windows(padded_m_mat,(3,3),step=1)
+    return m_matrix, l_matrix
 
 
-
-padded_m_mat = np.pad(m_mat,1,'constant',constant_values=(0))
-for y_win in range(1,y_win_dim-1):
-    for x_win in range(1,x_win_dim-1):
-        pass
-
-print(padded_m_mat)
-def calc_ilcm(padded):
+def calc_ilcm(padded: np.ndarray, m_matrix: np.ndarray, l_matrix: np.ndarray) -> np.ndarray:
+    x_win_dim = m_matrix.shape[0]
+    y_win_dim = m_matrix.shape[1]
     ilcm_mat = np.zeros([x_win_dim,y_win_dim])
     ilcm_win = view_as_windows(padded,(3,3),step=1)
-    for y_win in range(target_width+1):
-        for x_win in range(target_width+1):
+    for y_win in range(y_win_dim):
+        for x_win in range(x_win_dim):
             max_m = np.amax(ilcm_win[x_win,y_win])
-            ilcm_mat[x_win,y_win] = l_mat[x_win,y_win]*m_mat[x_win, y_win]/max_m
-    print(ilcm_mat)
+            ilcm_mat[x_win,y_win] = l_matrix[x_win,y_win]*m_matrix[x_win, y_win]/max_m
+
     return ilcm_mat
 
-ilcm = calc_ilcm(padded_m_mat)
 
-plt.imshow(ilcm, cmap='hot', interpolation='nearest')
-plt.show()
+def calc_thres(matrix: np.ndarray, k: int) -> int:
+
+    mean = matrix.mean()
+    mu = matrix.std()
+    thres = mu + k*mean
+    print(np.amax(matrix))
+    print(thres)
+
+    return thres
+
+
+def plot_heatmap(matrix: np.ndarray):
+    plt.imshow(matrix, cmap='hot', interpolation='nearest')
+    plt.show()
+
+
+def plot_3d(matrix: np.ndarray):
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    #
+    # Create an X-Y mesh of the same dimension as the 2D data
+    x_data, y_data = np.meshgrid( np.arange(matrix.shape[1]),
+                                  np.arange(matrix.shape[0]))
+    x_data = x_data.flatten()
+    y_data = y_data.flatten()
+    z_data = matrix.flatten()
+    ax.bar3d( x_data,
+              y_data,
+              np.zeros(len(z_data)),
+              1, 1, z_data)
+    plt.show()
+
+
+def main():
+    # Input settings
+    target_width = 100
+    stride = target_width // 2
+
+    # PreProcess and crop image
+    im = pre_process('person.jpg')
+
+    # Returns a matrix of pixel values
+    p_matrix = pixel_matrix(im)
+
+    # Break image into windows
+    windowed = view_as_windows(p_matrix,(target_width,target_width), step=stride)
+
+    # Return m and l matrices for ilcm calculation
+    m_mat, l_mat = process_windows(windowed, target_width)
+
+    # Add a pad of 0's to aid calculation
+    padded_m_mat = np.pad(m_mat, 1, 'constant', constant_values=0)
+
+    # Return ilcm matrix for plotting
+    ilcm_mat = calc_ilcm(padded_m_mat, m_mat, l_mat)
+
+    # Visualization
+    plot_heatmap(ilcm_mat)
+    plot_3d(ilcm_mat)
+
+if __name__ == '__main__':
+    main()
