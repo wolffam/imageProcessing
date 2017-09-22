@@ -5,19 +5,21 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 
-def pre_process(image_file: str) -> np.ndarray:
+def pre_process(image_file: str) -> Image:
     im_raw = Image.open(image_file)
-    im_crop = im_raw.crop((20,20,580,443))
+    width, height = im_raw.size
+    sub = 100
+    im_crop = im_raw.crop((0+sub, 0+sub, width-sub, height-sub))
     return im_crop
 
 
-def pixel_matrix(processed_image: np.ndarray) -> np.ndarray:
+def pixel_matrix(processed_image: Image) -> np.ndarray:
     width, height = processed_image.size
     pix_matrix = np.zeros([height, width])
     for x in range(width):
         for y in range(height):
             # '0' to just get the 'R' value
-            pix_matrix[y, x] = processed_image.getpixel((x, y))[0]
+            pix_matrix[y, x] = processed_image.getpixel((x, y))#[0]
     return pix_matrix
 
 
@@ -85,12 +87,12 @@ def plot_3d(matrix: np.ndarray):
 def main():
     # Input settings
     # Set to width of target in # of pixels
-    target_width = 100
+    target_width = 150
     # Sets stride of windows -- always half of the target width
     stride = target_width // 2
 
     # PreProcess and crop image
-    im = pre_process('person.jpg')
+    im = pre_process('building.png')
 
     # Returns a matrix of pixel values
     p_matrix = pixel_matrix(im)
@@ -112,7 +114,7 @@ def main():
 
     # Visualization
     plot_heatmap(ilcm_mat)
-    plot_3d(ilcm_mat)
+    #plot_3d(ilcm_mat)
 
 if __name__ == '__main__':
     main()
