@@ -15,12 +15,20 @@ def pre_process(image_file: str) -> Image:
 
 def pixel_matrix(processed_image: Image) -> np.ndarray:
     width, height = processed_image.size
-    pix_matrix = np.zeros([height, width])
+    bands = len(processed_image.getbands())
+    pix_matrix = np.zeros([width, height, bands])
     for x in range(width):
         for y in range(height):
-            # '0' to just get the 'R' value
-            pix_matrix[y, x] = processed_image.getpixel((x, y))#[0]
+            if bands == 1:
+                pix_matrix[x, y] = processed_image.getpixel((x, y))
+            else:
+                for z in range(bands):
+                    pix_matrix[x, y, z] = processed_image.getpixel((x, y))[z]
     return pix_matrix
+
+
+def average_bands(pix_matrix: np.ndarray) -> np.ndarray:
+    return pix_matrix.mean(axis=2)
 
 
 def process_windows(window_mat: np.ndarray, target_wid: int) -> (np.ndarray, np.ndarray):
@@ -87,18 +95,21 @@ def plot_3d(matrix: np.ndarray):
 def main():
     # Input settings
     # Set to width of target in # of pixels
-    target_width = 150
+    target_width = 50
     # Sets stride of windows -- always half of the target width
     stride = target_width // 2
 
     # PreProcess and crop image
-    im = pre_process('building.png')
+    im = pre_process('mountain_0050.jpg')
 
     # Returns a matrix of pixel values
     p_matrix = pixel_matrix(im)
 
+    # Only necessary when bands > 1
+    ave_mat = average_bands(p_matrix)
+
     # Break image into windows
-    windowed = view_as_windows(p_matrix,(target_width,target_width), step=stride)
+    windowed = view_as_windows(ave_mat,(target_width,target_width), step=stride)
 
     # Return m and l matrices for ilcm calculation
     m_mat, l_mat = process_windows(windowed, target_width)
@@ -113,7 +124,7 @@ def main():
     #threshold = calc_thres(ilcm_mat, k=1.25)
 
     # Visualization
-    plot_heatmap(ilcm_mat)
+    plot_heatmap(ilcm_mat.transpose()) # Unsure why transpose is necessary?
     #plot_3d(ilcm_mat)
 
 if __name__ == '__main__':
