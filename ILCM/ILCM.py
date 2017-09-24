@@ -16,14 +16,22 @@ def pre_process(image_file: str) -> Image:
 def pixel_matrix(processed_image: Image) -> np.ndarray:
     width, height = processed_image.size
     bands = len(processed_image.getbands())
+    pix_matrix = np.array(processed_image.getdata(), ndmin=3)
+    pix_matrix = pix_matrix.reshape(height, width, bands)
+    # TODO CLOSE! transpose just the first 2 axes
+    print(pix_matrix.transpose((0)).shape)
+    print(pix_matrix[0:5, 0:5, 0])
     pix_matrix = np.zeros([width, height, bands])
     for x in range(width):
+        # TODO Find new operation to make quicker
         for y in range(height):
             if bands == 1:
                 pix_matrix[x, y] = processed_image.getpixel((x, y))
             else:
                 for z in range(bands):
                     pix_matrix[x, y, z] = processed_image.getpixel((x, y))[z]
+    print(pix_matrix[0:5,0:5,0])
+    print(pix_matrix.shape)
     return pix_matrix
 
 
@@ -32,28 +40,18 @@ def average_bands(pix_matrix: np.ndarray) -> np.ndarray:
 
 
 def process_windows(window_mat: np.ndarray, target_wid: int) -> (np.ndarray, np.ndarray):
-    x_win_dim = window_mat.shape[0]
-    y_win_dim = window_mat.shape[1]
-    m_matrix = np.zeros([x_win_dim,y_win_dim])
-    l_matrix = np.zeros([x_win_dim,y_win_dim])
 
-    for y_win in range(y_win_dim):
-        for x_win in range(x_win_dim):
-            m_matrix[x_win, y_win] = 1 / (target_wid ** 2) * window_mat[x_win,y_win].sum()
-            l_matrix[x_win, y_win] = np.amax(window_mat[x_win,y_win])
+    m_matrix = np.multiply(1/(target_wid ** 2), window_mat.sum(axis=(2, 3)))
+    l_matrix = np.amax(window_mat, axis=(2, 3))
 
     return m_matrix, l_matrix
 
 
 def calc_ilcm(padded: np.ndarray, m_matrix: np.ndarray, l_matrix: np.ndarray) -> np.ndarray:
-    x_win_dim = m_matrix.shape[0]
-    y_win_dim = m_matrix.shape[1]
-    ilcm_mat = np.zeros([x_win_dim,y_win_dim])
-    ilcm_win = view_as_windows(padded,(3,3),step=1)
-    for y_win in range(y_win_dim):
-        for x_win in range(x_win_dim):
-            max_m = np.amax(ilcm_win[x_win,y_win])
-            ilcm_mat[x_win,y_win] = l_matrix[x_win,y_win]*m_matrix[x_win, y_win]/max_m
+
+    ilcm_win = view_as_windows(padded, (3,3), step=1)
+    max_m_mat = np.amax(ilcm_win, axis=(2,3))
+    ilcm_mat = np.divide(np.multiply(l_matrix, m_matrix), max_m_mat)
 
     return ilcm_mat
 
@@ -95,12 +93,12 @@ def plot_3d(matrix: np.ndarray):
 def main():
     # Input settings
     # Set to width of target in # of pixels
-    target_width = 50
+    target_width = 10
     # Sets stride of windows -- always half of the target width
     stride = target_width // 2
 
     # PreProcess and crop image
-    im = pre_process('mountain_0050.jpg')
+    im = pre_process('person.jpg')
 
     # Returns a matrix of pixel values
     p_matrix = pixel_matrix(im)

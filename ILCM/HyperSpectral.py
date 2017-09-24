@@ -5,10 +5,9 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn.decomposition import PCA
 
-im = Image.open('mountain_0050.jpg')
+im = Image.open('person.jpg')
 width, height = im.size
 print(width,height)
-print(im.getpixel((1000,500)))
 
 def pixel_matrix(processed_image: Image) -> np.ndarray:
     width, height = processed_image.size
@@ -20,8 +19,18 @@ def pixel_matrix(processed_image: Image) -> np.ndarray:
                 pix_matrix[y, x, z] = processed_image.getpixel((x, y))[z]
     return pix_matrix
 
-pix_mat = pixel_matrix(im)
-print(pix_mat[500,1000,2])
+
+def pixel_matrix_opt(processed_image):
+    data_list = list(processed_image.getdata())
+    test = np.array(data_list)
+    print(test.shape)
+    test2 = test.reshape(600,463,3)
+    print(test2.shape)
+    print(test2[0,0,0])
+    print(data_list[0])
+    print(processed_image.getdata().shape)
+#pix_mat = pixel_matrix(im)
+pixel_matrix_opt(im)
 
 
 pca = PCA(n_components=1)
