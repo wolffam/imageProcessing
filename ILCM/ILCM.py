@@ -14,24 +14,13 @@ def pre_process(image_file: str) -> Image:
 
 
 def pixel_matrix(processed_image: Image) -> np.ndarray:
+
     width, height = processed_image.size
     bands = len(processed_image.getbands())
-    pix_matrix = np.array(processed_image.getdata(), ndmin=3)
-    pix_matrix = pix_matrix.reshape(height, width, bands)
-    # TODO CLOSE! transpose just the first 2 axes
-    print(pix_matrix.transpose((0)).shape)
-    print(pix_matrix[0:5, 0:5, 0])
-    pix_matrix = np.zeros([width, height, bands])
-    for x in range(width):
-        # TODO Find new operation to make quicker
-        for y in range(height):
-            if bands == 1:
-                pix_matrix[x, y] = processed_image.getpixel((x, y))
-            else:
-                for z in range(bands):
-                    pix_matrix[x, y, z] = processed_image.getpixel((x, y))[z]
-    print(pix_matrix[0:5,0:5,0])
-    print(pix_matrix.shape)
+    pix_array = np.array(processed_image.getdata(), ndmin=3)
+    pix_reshaped = pix_array.reshape(height, width, bands)
+    pix_matrix = np.transpose(pix_reshaped, axes=[1,0,2])
+
     return pix_matrix
 
 
@@ -93,12 +82,12 @@ def plot_3d(matrix: np.ndarray):
 def main():
     # Input settings
     # Set to width of target in # of pixels
-    target_width = 10
+    target_width = 150
     # Sets stride of windows -- always half of the target width
     stride = target_width // 2
 
     # PreProcess and crop image
-    im = pre_process('person.jpg')
+    im = pre_process('building.png')
 
     # Returns a matrix of pixel values
     p_matrix = pixel_matrix(im)
