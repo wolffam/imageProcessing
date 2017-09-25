@@ -14,38 +14,33 @@ def pre_process(image_file: str) -> Image:
 
 
 def pixel_matrix(processed_image: Image) -> np.ndarray:
+
     width, height = processed_image.size
-    pix_matrix = np.zeros([height, width])
-    for x in range(width):
-        for y in range(height):
-            # '0' to just get the 'R' value
-            pix_matrix[y, x] = processed_image.getpixel((x, y))#[0]
+    bands = len(processed_image.getbands())
+    pix_array = np.array(processed_image.getdata(), ndmin=3)
+    pix_reshaped = pix_array.reshape(height, width, bands)
+    pix_matrix = np.transpose(pix_reshaped, axes=[1,0,2])
+
     return pix_matrix
 
 
-def process_windows(window_mat: np.ndarray, target_wid: int) -> (np.ndarray, np.ndarray):
-    x_win_dim = window_mat.shape[0]
-    y_win_dim = window_mat.shape[1]
-    m_matrix = np.zeros([x_win_dim,y_win_dim])
-    l_matrix = np.zeros([x_win_dim,y_win_dim])
+def average_bands(pix_matrix: np.ndarray) -> np.ndarray:
+    return pix_matrix.mean(axis=2)
 
-    for y_win in range(y_win_dim):
-        for x_win in range(x_win_dim):
-            m_matrix[x_win, y_win] = 1 / (target_wid ** 2) * window_mat[x_win,y_win].sum()
-            l_matrix[x_win, y_win] = np.amax(window_mat[x_win,y_win])
+
+def process_windows(window_mat: np.ndarray, target_wid: int) -> (np.ndarray, np.ndarray):
+
+    m_matrix = np.multiply(1/(target_wid ** 2), window_mat.sum(axis=(2, 3)))
+    l_matrix = np.amax(window_mat, axis=(2, 3))
 
     return m_matrix, l_matrix
 
 
 def calc_ilcm(padded: np.ndarray, m_matrix: np.ndarray, l_matrix: np.ndarray) -> np.ndarray:
-    x_win_dim = m_matrix.shape[0]
-    y_win_dim = m_matrix.shape[1]
-    ilcm_mat = np.zeros([x_win_dim,y_win_dim])
-    ilcm_win = view_as_windows(padded,(3,3),step=1)
-    for y_win in range(y_win_dim):
-        for x_win in range(x_win_dim):
-            max_m = np.amax(ilcm_win[x_win,y_win])
-            ilcm_mat[x_win,y_win] = l_matrix[x_win,y_win]*m_matrix[x_win, y_win]/max_m
+
+    ilcm_win = view_as_windows(padded, (3,3), step=1)
+    max_m_mat = np.amax(ilcm_win, axis=(2,3))
+    ilcm_mat = np.divide(np.multiply(l_matrix, m_matrix), max_m_mat)
 
     return ilcm_mat
 
@@ -97,8 +92,11 @@ def main():
     # Returns a matrix of pixel values
     p_matrix = pixel_matrix(im)
 
+    # Only necessary when bands > 1
+    ave_mat = average_bands(p_matrix)
+
     # Break image into windows
-    windowed = view_as_windows(p_matrix,(target_width,target_width), step=stride)
+    windowed = view_as_windows(ave_mat,(target_width,target_width), step=stride)
 
     # Return m and l matrices for ilcm calculation
     m_mat, l_mat = process_windows(windowed, target_width)
@@ -113,7 +111,7 @@ def main():
     #threshold = calc_thres(ilcm_mat, k=1.25)
 
     # Visualization
-    plot_heatmap(ilcm_mat)
+    plot_heatmap(ilcm_mat.transpose()) # Unsure why transpose is necessary?
     #plot_3d(ilcm_mat)
 
 if __name__ == '__main__':
