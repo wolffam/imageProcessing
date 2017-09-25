@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn.decomposition import PCA
 
-im = Image.open('person.jpg')
+im = Image.open('mountain_0050.jpg')
 width, height = im.size
 print(width,height)
 
@@ -37,7 +37,7 @@ pca = PCA(n_components=1)
 pca_mat = np.zeros([height, width])
 for x in range(width):
     for y in range(height):
-        pca.fit(pix_mat[y, x, :].reshape(-1,1))
+        pca.fit(pca_mat[y, x, :].reshape(-1,1))
         PCA(copy=True, iterated_power='auto', n_components=1, random_state=None,
           svd_solver='auto', tol=0.0, whiten=False)
         pca_mat[y,x] = pca.singular_values_
